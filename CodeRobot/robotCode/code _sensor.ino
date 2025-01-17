@@ -64,19 +64,3 @@ void loop() {
     lastTickleTime = currentTime;
   }
 }
-
-// // Function to play a specific track
-// void playSound(int track) {
-//   Serial.print("Playing track ");
-//   Serial.println(track);
-
-//   // Send command to play the specified track
-//   mp3Serial.write(0x7E); // Start byte
-//   mp3Serial.write(0xFF); // Version
-//   mp3Serial.write(0x06); // Command length
-//   mp3Serial.write(0x03); // Play track command
-//   mp3Serial.write(0x00); // Feedback
-//   mp3Serial.write(0x00); // High byte of track number
-//   mp3Serial.write(track); // Low byte of track number
-//   mp3Serial.write(0xEF); // End byte
-// }
