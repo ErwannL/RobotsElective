@@ -4,7 +4,7 @@
 #include "DFRobotDFPlayerMini.h"
 
 //the i2c address of your Arduino
-#define SLAVE_ADDRESS 0x02  // change this to 0x01, 0x02, 0x03, 0x04 or 0x05, depending on the values chosen by your teammates
+#define SLAVE_ADDRESS 0x01  // change this to 0x01, 0x02, 0x03, 0x04 or 0x05, depending on the values chosen by your teammates
 
 //used for communicating the emotion values
 #define NUM_VALUES 5                    // number of values to send
@@ -44,9 +44,9 @@ DFRobotDFPlayerMini Songs_player;
 DFRobotDFPlayerMini Laugh_player;
 
 // Threshold and time window for tickling
-const int TICKLE_THRESHOLD = 10; // Minimum combined activations for a "tickle"
-const unsigned long TICKLE_TIME = 800; // Time window in milliseconds
-const unsigned long NO_TICKLE_TIME = 5000; // Time window in milliseconds
+const int TICKLE_THRESHOLD = 5; // Minimum combined activations for a "tickle"
+const unsigned long TICKLE_TIME = 500; // Time window in milliseconds
+const unsigned long NO_TICKLE_TIME = 10000; // Time window in milliseconds
 
 // Variables to track activations and time
 int totalTouches = 0; // Global counter for combined activations
@@ -103,27 +103,21 @@ void setup()
   } else {
     Serial.println("Connecting to Songs DFPlayer Mini failed!");
   }
+  lastTickleTime = millis();
 }
 
 //function loop is always needed and is called continuously
 void loop()
 {
   doSomething(); //example function
-
   printStateMachineValues(); //show the values that the state machine communicated
-
-  delay(500); // an arbitrary delay, can be changed to whatever you need
+  delay(1000); // an arbitrary delay, can be changed to whatever you need
 }
 
 //Yes, this is written inefficient, but very easy to understand ;)
 //It sets each of the 5 values for changing the emotions by randomly assigning a 0, 1 or -1 to each
 void doSomething()
 {
-  byte* changes[] = {&change_in_happy, &change_in_energy, &change_in_friendly, &change_in_assertive, &change_in_delight};
-  for (int i = 0; i < 5; i++) {
-      *changes[i] = 0;
-  }
-
   // Check each sensor and count activations
   for (int i = 0; i < 5; i++) {
     if (digitalRead(sensorPins[i]) == HIGH) {
@@ -136,46 +130,47 @@ void doSomething()
 
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= TICKLE_TIME) {
-    if (totalTouches >= TICKLE_THRESHOLD) {
-      if (state_machine_values[4] < 300)
-        change_in_friendly = change_state(change_in_friendly, -1);
-      else {
-        change_in_friendly = change_state(change_in_friendly, 1);
-        change_in_happy = change_state(change_in_happy, 1);
-      }
-    }
-
-    // Reset the counter and time
-    totalTouches = 0;
     lastTickleTime = currentTime;
+    if (totalTouches >= TICKLE_THRESHOLD) {
+      totalTouches = 0;
+      if (state_machine_values[4] < 300) {
+        change_in_friendly = changeState(change_in_friendly, -1);
+      } else {
+        change_in_friendly = changeState(change_in_friendly, 1);
+        change_in_happy = changeState(change_in_happy, 1);
+      }
+    } else {
+      Serial.print("still ");
+      Serial.print(TICKLE_THRESHOLD - totalTouches);
+      Serial.println(" tickle before detected");
+    }
   }
 
   sendToStateMachine();
 
   if (state_machine_values[0] < 300) {
-    Songs_player.play(2); //playing next to you
+    playSongs(Songs_player, 2);
   }
   if (state_machine_values[0] > 700) {
-    Songs_player.play(1); //playing micheal jackson
+    playSongs(Songs_player, 1);
     int randomLaugh = random(1, 6); // Get a random between 1 and 5
-    Laugh_player.play(randomLaugh); // playing laugh
+    playSongs(Laugh_player, randomLaugh);
+    Serial.println("CACA");
   }
   if ((state_machine_values[2] < 300) || (state_machine_values[4] < 300)) {
-    Songs_player.play(6); //playing no
+    playSongs(Laugh_player, 6);
   }
   if ((state_machine_values[2] < 200) || (state_machine_values[4] < 200)) {
-    Songs_player.play(7); //playing no
+    playSongs(Laugh_player, 7);
   }
   if ((state_machine_values[2] < 100) || (state_machine_values[4] < 100)) {
-    Songs_player.play(8); //playing no
+    playSongs(Laugh_player, 8);
   }
 
   currentTime = millis();
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= NO_TICKLE_TIME) {
-    if (totalTouches >= TICKLE_THRESHOLD) {
-      change_in_happy = change_state(change_in_happy, -1);
-    }
+    change_in_happy = changeState(change_in_happy, -1);
   }
 }
 
@@ -228,9 +223,22 @@ void printStateMachineValues()
 }
 
 
-byte change_state(byte state_to_change, int to_change) {
-    state_to_change += to_change;
-    if ((state_to_change == 1 && to_change <= 0)) || (state_to_change == 0 && to_change >= 0)) {
+void playSongs(DFRobotDFPlayerMini &player, int music_number) {
+    Serial.println("PIPI");
+    int x = player.readState();
+    Serial.println("pou");
+    if (x < 0) { // Si aucune musique ne joue, démarre une nouvelle
+        Serial.println("non non non");
+        player.play(music_number);
+    } else {
+        Serial.println("c ici");
+        Serial.println(x);
+    }
+}
+
+
+byte changeState(byte state_to_change, int to_change) {
+    if ((state_to_change == 1 && to_change <= 0) || (state_to_change == 0 && to_change >= 0)) {
       state_to_change += to_change;
     } else if (state_to_change == 1 && to_change == 1) {
       state_to_change = 1;
@@ -259,12 +267,19 @@ void sendToStateMachine()
   Serial.print(" ");
   Serial.println(change_in_delight);
 
-  state_machine_values[0] += (change_in_happy == 1) ? 1 : (change_in_happy == 255) ? -1 : 0;
-  state_machine_values[1] += (change_in_energy == 1) ? 1 : (change_in_energy == 255) ? -1 : 0;
-  state_machine_values[2] += (change_in_friendly == 1) ? 1 : (change_in_friendly == 255) ? -1 : 0;
-  state_machine_values[3] += (change_in_assertive == 1) ? 1 : (change_in_assertive == 255) ? -1 : 0;
-  state_machine_values[4] += (change_in_delight == 1) ? 1 : (change_in_delight == 255) ? -1 : 0;
+  state_machine_values[0] += (change_in_happy == 1) ? 20 : (change_in_happy == 255) ? -20 : 0;
+  state_machine_values[1] += (change_in_energy == 1) ? 20 : (change_in_energy == 255) ? -20 : 0;
+  state_machine_values[2] += (change_in_friendly == 1) ? 20 : (change_in_friendly == 255) ? -20 : 0;
+  state_machine_values[3] += (change_in_assertive == 1) ? 20 : (change_in_assertive == 255) ? -20 : 0;
+  state_machine_values[4] += (change_in_delight == 1) ? 20 : (change_in_delight == 255) ? -20 : 0;
 
+  for (int i = 0; i < NUM_VALUES; i++) {
+    if (state_machine_values[i] < 0) {
+      state_machine_values[i] = 0;
+    } else if (state_machine_values[i] > 1000) {
+      state_machine_values[i] = 1000;
+    }
+  }
 }
 
 
