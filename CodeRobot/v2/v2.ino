@@ -9,14 +9,12 @@
 #define TOUCH_SENSOR_LEFT 5
 #define TOUCH_SENSOR_CENTER 6
 
-SoftwareSerial Songs_Serial(9, 8); //tx, rx
-SoftwareSerial Laugh_Serial(12, 11); //tx, rx
+SoftwareSerial Songs_Serial(12, 11); //tx, rx
+SoftwareSerial Laugh_Serial(9, 8); //tx, rx
 
 // Create the Player object
 DFRobotDFPlayerMini Songs_player;
 DFRobotDFPlayerMini Laugh_player;
-
-bool hasPlayed = false;
 
 // Threshold and time window for tickling
 const int TICKLE_THRESHOLD = 10; // Minimum combined activations for a "tickle"
@@ -44,7 +42,7 @@ void setup() {
     Serial.println("Laugh_player OK");
 
     // Set volume to maximum (0 to 30).
-    Laugh_player.volume(3); //30 is very loud
+    Laugh_player.volume(15); //30 is very loud
   } else {
     Serial.println("Connecting to Laugh DFPlayer Mini failed!");
   }
@@ -54,7 +52,7 @@ void setup() {
     Serial.println("Songs_player OK");
 
     // Set volume to maximum (0 to 30).
-    Songs_player.volume(3); //30 is very loud
+    Songs_player.volume(5); //30 is very loud
   } else {
     Serial.println("Connecting to Songs DFPlayer Mini failed!");
   }
@@ -79,12 +77,9 @@ void loop()
       Serial.println("Tickle detected!");
       Serial.println("Playing sound...");
       // Send command to play the same sound
-      if (!hasPlayed) {
-        Serial.println("Playing");
-        Songs_player.play(1);
-        Laugh_player.play(1);
-        hasPlayed = true; // Marquer que les chansons ont été jouées
-      }
+      Serial.println("Playing");
+      Songs_player.play(1);
+      Laugh_player.play(1);
     }
 
     // Reset the counter and time
