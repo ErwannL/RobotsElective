@@ -126,7 +126,7 @@ void loop()
 //It sets each of the 5 values for changing the emotions by randomly assigning a 0, 1 or -1 to each
 void doSomething()
 {
-      Serial.println("DEBUG 1");
+      // Serial.println("DEBUG 1");
 
   // Check each sensor and count activations
   for (int i = 0; i < 5; i++) {
@@ -134,11 +134,11 @@ void doSomething()
       totalTouches++;
     }
   }
-  Serial.println("DEBUG 2");
+  // Serial.println("DEBUG 2");
 
   // Current time for tracking
   unsigned long currentTime = millis();
-  Serial.println("DEBUG 3");
+  // Serial.println("DEBUG 3");
 
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= TICKLE_TIME) {
@@ -157,40 +157,46 @@ void doSomething()
       Serial.println(" tickle before detected");
     }
   }
-  Serial.println("DEBUG 4");
+  // Serial.println("DEBUG 4");
 
   sendToStateMachine();
 
-  Serial.println("DEBUG 5");
+  // Serial.println("DEBUG 5");
 
   if (state_machine_values[0] < 300) {
-    last_played_music = playSongs(Songs_player, 2, MUSICS, last_played_music);
+    // last_played_music = playSongs(Songs_player, 2, MUSICS, last_played_music);
+    Songs_player.play(2);
   }
-  Serial.println("DEBUG 6");
+  // Serial.println("DEBUG 6");
   if (state_machine_values[0] > 700) {
-    Serial.println("DEBUG 6-a");
-    last_played_music = playSongs(Songs_player, 1, MUSICS, last_played_music);
-    Serial.println("DEBUG 6-b");
+    // Serial.println("DEBUG 6-a");
+    // last_played_music = playSongs(Songs_player, 1, MUSICS, last_played_music);
+    Songs_player.play(1);
+    // Serial.println("DEBUG 6-b");
     int randomLaugh = random(1, 6); // Get a random between 1 and 5
-    Serial.println("DEBUG 6-c");
-    last_played_song = playSongs(Laugh_player, randomLaugh, SONGS, last_played_song);
-    Serial.println("DEBUG 6-d");
+    // Serial.println("DEBUG 6-c");
+    // last_played_song = playSongs(Laugh_player, randomLaugh, SONGS, last_played_song);
+    Laugh_player.play(randomLaugh);
+    // Serial.println("DEBUG 6-d");
   }
-  Serial.println("DEBUG 7");
+  // Serial.println("DEBUG 7");
   if ((state_machine_values[2] < 300) || (state_machine_values[4] < 300)) {
-    last_played_song = playSongs(Laugh_player, 6, SONGS, last_played_song);
+    // last_played_song = playSongs(Laugh_player, 6, SONGS, last_played_song);
+    Laugh_player.play(6);
   }
-  Serial.println("DEBUG 8");
+  // Serial.println("DEBUG 8");
 
   if ((state_machine_values[2] < 200) || (state_machine_values[4] < 200)) {
-    last_played_song = playSongs(Laugh_player, 7, SONGS, last_played_song);
+    // last_played_song = playSongs(Laugh_player, 7, SONGS, last_played_song);
+    Laugh_player.play(7);
   }
-  Serial.println("DEBUG 9");
+  // Serial.println("DEBUG 9");
 
   if ((state_machine_values[2] < 100) || (state_machine_values[4] < 100)) {
-    last_played_song = playSongs(Laugh_player, 8, SONGS, last_played_song);
+    // last_played_song = playSongs(Laugh_player, 8, SONGS, last_played_song);
+    Laugh_player.play(8);
   }
-  Serial.println("DEBUG 10");
+  // Serial.println("DEBUG 10");
 
 
   currentTime = millis();
@@ -198,7 +204,7 @@ void doSomething()
   if (currentTime - lastTickleTime >= NO_TICKLE_TIME) {
     change_in_happy = changeState(change_in_happy, -1);
   }
-  Serial.println("DEBUG 11");
+  // Serial.println("DEBUG 11");
 }
 
 //example how to print the values from the state machine
@@ -250,57 +256,56 @@ void printStateMachineValues()
 }
 
 
-unsigned long playSongs(DFRobotDFPlayerMini &player, int music_number, const unsigned long reset_timer, unsigned long last_played) {
+// unsigned long playSongs(DFRobotDFPlayerMini &player, int music_number, const unsigned long reset_timer, unsigned long last_played) {
 
-  Serial.println("DEBUG 6-c-1");
-  unsigned long now = millis();
-  Serial.println("DEBUG 6-c-2");
-  unsigned long dif = now - last_played;
-  Serial.println("DEBUG 6-c-3");
-  Serial.println(dif);
-  Serial.println(reset_timer);
-  Serial.println(alredy_played_music);
-  Serial.println(!alredy_played_music);
-  Serial.println((!alredy_played_music && reset_timer == 300000));
-  Serial.println(alredy_played_songs);
-  Serial.println(!alredy_played_songs);
-  Serial.println((!alredy_played_songs && reset_timer != 300000));
-  if (reset_timer != 300000) {
-    Serial.println("BIBOUBI");
-    player.play(1);
-    player.waitAvailable(10000);
-    Serial.println("BIBOUBI");
-  } else if ((dif > reset_timer) || (!alredy_played_music && reset_timer == 300000) || (!alredy_played_songs && reset_timer != 300000)) { // Si aucune musique ne joue, démarre une nouvelle
-      Serial.println("DEBUG 6-c-4");
-      Serial.println(music_number);
-      // if (alredy_played_music && reset_timer == 300000) {
-      //   Serial.println("stop music");  
-      //   player.stop();
-      // }
-      // if (alredy_played_songs && reset_timer != 300000) {
-      //   Serial.println("stop songs");  
-      //   player.stop();
-      // }
-      // Serial.println("DEBUG 6-c-4-a");
-      if (reset_timer == 300000) {
-        alredy_played_music = true;
-      } else {
-        alredy_played_songs = true;
-      }
-      Serial.println("DEBUG 6-c-4-b");
-      Serial.println(player.readState()); //read mp3 state
-      player.play(music_number);
-      Serial.println(now);
-      Serial.println("PLAY");
-      Serial.println("DEBUG 6-c-5");
-      return now;
-  } else {
-    Serial.println("DEBUG 6-c-6");
-    return last_played;
-  }
-}
-// 14:41:43.415
-// 14:41:53.794
+//   // Serial.println("DEBUG 6-c-1");
+//   unsigned long now = millis();
+//   // Serial.println("DEBUG 6-c-2");
+//   unsigned long dif = now - last_played;
+//   // Serial.println("DEBUG 6-c-3");
+//   Serial.println(dif);
+//   Serial.println(reset_timer);
+//   Serial.println(alredy_played_music);
+//   Serial.println(!alredy_played_music);
+//   Serial.println((!alredy_played_music && reset_timer == 300000));
+//   Serial.println(alredy_played_songs);
+//   Serial.println(!alredy_played_songs);
+//   Serial.println((!alredy_played_songs && reset_timer != 300000));
+//   if (reset_timer != 300000) {
+//     // Serial.println("BIBOUBI");
+//     player.play(1);
+//     player.waitAvailable(10000);
+//     // Serial.println("BIBOUBI");
+//   } else if ((dif > reset_timer) || (!alredy_played_music && reset_timer == 300000) || (!alredy_played_songs && reset_timer != 300000)) { // Si aucune musique ne joue, démarre une nouvelle
+//       // Serial.println("DEBUG 6-c-4");
+//       Serial.println(music_number);
+//       // if (alredy_played_music && reset_timer == 300000) {
+//       //   Serial.println("stop music");  
+//       //   player.stop();
+//       // }
+//       // if (alredy_played_songs && reset_timer != 300000) {
+//       //   Serial.println("stop songs");  
+//       //   player.stop();
+//       // }
+//       // Serial.println("DEBUG 6-c-4-a");
+//       if (reset_timer == 300000) {
+//         alredy_played_music = true;
+//       } else {
+//         alredy_played_songs = true;
+//       }
+//       // Serial.println("DEBUG 6-c-4-b");
+//       Serial.println(player.readState()); //read mp3 state
+//       player.play(music_number);
+//       Serial.println(now);
+//       Serial.println("PLAY");
+//       // Serial.println("DEBUG 6-c-5");
+//       return now;
+//   } else {
+//     // Serial.println("DEBUG 6-c-6");
+//     return last_played;
+//   }
+// }
+
 byte changeState(byte state_to_change, int to_change) {
     if ((state_to_change == 1 && to_change <= 0) || (state_to_change == 0 && to_change >= 0)) {
       state_to_change += to_change;
@@ -331,19 +336,19 @@ void sendToStateMachine()
   Serial.print(" ");
   Serial.println(change_in_delight);
 
-  // state_machine_values[0] += (change_in_happy == 1) ? 20 : (change_in_happy == 255) ? -20 : 0;
-  // state_machine_values[1] += (change_in_energy == 1) ? 20 : (change_in_energy == 255) ? -20 : 0;
-  // state_machine_values[2] += (change_in_friendly == 1) ? 20 : (change_in_friendly == 255) ? -20 : 0;
-  // state_machine_values[3] += (change_in_assertive == 1) ? 20 : (change_in_assertive == 255) ? -20 : 0;
-  // state_machine_values[4] += (change_in_delight == 1) ? 20 : (change_in_delight == 255) ? -20 : 0;
+  state_machine_values[0] += (change_in_happy == 1) ? 50 : (change_in_happy == 255) ? -50 : 0;
+  state_machine_values[1] += (change_in_energy == 1) ? 50 : (change_in_energy == 255) ? -50 : 0;
+  state_machine_values[2] += (change_in_friendly == 1) ? 50 : (change_in_friendly == 255) ? -50 : 0;
+  state_machine_values[3] += (change_in_assertive == 1) ? 50 : (change_in_assertive == 255) ? -50 : 0;
+  state_machine_values[4] += (change_in_delight == 1) ? 50 : (change_in_delight == 255) ? -50 : 0;
 
-  // for (int i = 0; i < NUM_VALUES; i++) {
-  //   if (state_machine_values[i] < 0) {
-  //     state_machine_values[i] = 0;
-  //   } else if (state_machine_values[i] > 1000) {
-  //     state_machine_values[i] = 1000;
-  //   }
-  // }
+  for (int i = 0; i < NUM_VALUES; i++) {
+    if (state_machine_values[i] < 0) {
+      state_machine_values[i] = 0;
+    } else if (state_machine_values[i] > 1000) {
+      state_machine_values[i] = 1000;
+    }
+  }
 }
 
 
