@@ -46,7 +46,15 @@ DFRobotDFPlayerMini Laugh_player;
 // Threshold and time window for tickling
 const int TICKLE_THRESHOLD = 5; // Minimum combined activations for a "tickle"
 const unsigned long TICKLE_TIME = 500; // Time window in milliseconds
-const unsigned long NO_TICKLE_TIME = 10000; // Time window in milliseconds
+const unsigned long NO_TICKLE_TIME = 5000; // Time window in milliseconds
+const unsigned long MUSICS = 300000;
+const unsigned long SONGS = 20000;
+
+unsigned long last_played_music = 0;
+unsigned long last_played_song = 0;
+
+bool alredy_played_music = false;
+bool alredy_played_songs = false;
 
 // Variables to track activations and time
 int totalTouches = 0; // Global counter for combined activations
@@ -89,7 +97,7 @@ void setup()
     Serial.println("Laugh_player OK");
 
     // Set volume to maximum (0 to 30).
-    Laugh_player.volume(10); //30 is very loud
+    Laugh_player.volume(2); //30 is very loud
   } else {
     Serial.println("Connecting to Laugh DFPlayer Mini failed!");
   }
@@ -99,7 +107,7 @@ void setup()
     Serial.println("Songs_player OK");
 
     // Set volume to maximum (0 to 30).
-    Songs_player.volume(5); //30 is very loud
+    Songs_player.volume(2); //30 is very loud
   } else {
     Serial.println("Connecting to Songs DFPlayer Mini failed!");
   }
@@ -118,20 +126,24 @@ void loop()
 //It sets each of the 5 values for changing the emotions by randomly assigning a 0, 1 or -1 to each
 void doSomething()
 {
+      Serial.println("DEBUG 1");
+
   // Check each sensor and count activations
   for (int i = 0; i < 5; i++) {
     if (digitalRead(sensorPins[i]) == HIGH) {
       totalTouches++;
     }
   }
+  Serial.println("DEBUG 2");
 
   // Current time for tracking
   unsigned long currentTime = millis();
+  Serial.println("DEBUG 3");
 
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= TICKLE_TIME) {
-    lastTickleTime = currentTime;
     if (totalTouches >= TICKLE_THRESHOLD) {
+      lastTickleTime = currentTime;
       totalTouches = 0;
       if (state_machine_values[4] < 300) {
         change_in_friendly = changeState(change_in_friendly, -1);
@@ -145,33 +157,48 @@ void doSomething()
       Serial.println(" tickle before detected");
     }
   }
+  Serial.println("DEBUG 4");
 
   sendToStateMachine();
 
+  Serial.println("DEBUG 5");
+
   if (state_machine_values[0] < 300) {
-    playSongs(Songs_player, 2);
+    last_played_music = playSongs(Songs_player, 2, MUSICS, last_played_music);
   }
+  Serial.println("DEBUG 6");
   if (state_machine_values[0] > 700) {
-    playSongs(Songs_player, 1);
+    Serial.println("DEBUG 6-a");
+    last_played_music = playSongs(Songs_player, 1, MUSICS, last_played_music);
+    Serial.println("DEBUG 6-b");
     int randomLaugh = random(1, 6); // Get a random between 1 and 5
-    playSongs(Laugh_player, randomLaugh);
-    Serial.println("CACA");
+    Serial.println("DEBUG 6-c");
+    last_played_song = playSongs(Laugh_player, randomLaugh, SONGS, last_played_song);
+    Serial.println("DEBUG 6-d");
   }
+  Serial.println("DEBUG 7");
   if ((state_machine_values[2] < 300) || (state_machine_values[4] < 300)) {
-    playSongs(Laugh_player, 6);
+    last_played_song = playSongs(Laugh_player, 6, SONGS, last_played_song);
   }
+  Serial.println("DEBUG 8");
+
   if ((state_machine_values[2] < 200) || (state_machine_values[4] < 200)) {
-    playSongs(Laugh_player, 7);
+    last_played_song = playSongs(Laugh_player, 7, SONGS, last_played_song);
   }
+  Serial.println("DEBUG 9");
+
   if ((state_machine_values[2] < 100) || (state_machine_values[4] < 100)) {
-    playSongs(Laugh_player, 8);
+    last_played_song = playSongs(Laugh_player, 8, SONGS, last_played_song);
   }
+  Serial.println("DEBUG 10");
+
 
   currentTime = millis();
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= NO_TICKLE_TIME) {
     change_in_happy = changeState(change_in_happy, -1);
   }
+  Serial.println("DEBUG 11");
 }
 
 //example how to print the values from the state machine
@@ -223,20 +250,57 @@ void printStateMachineValues()
 }
 
 
-void playSongs(DFRobotDFPlayerMini &player, int music_number) {
-    Serial.println("PIPI");
-    int x = player.readState();
-    Serial.println("pou");
-    if (x < 0) { // Si aucune musique ne joue, démarre une nouvelle
-        Serial.println("non non non");
-        player.play(music_number);
-    } else {
-        Serial.println("c ici");
-        Serial.println(x);
-    }
+unsigned long playSongs(DFRobotDFPlayerMini &player, int music_number, const unsigned long reset_timer, unsigned long last_played) {
+
+  Serial.println("DEBUG 6-c-1");
+  unsigned long now = millis();
+  Serial.println("DEBUG 6-c-2");
+  unsigned long dif = now - last_played;
+  Serial.println("DEBUG 6-c-3");
+  Serial.println(dif);
+  Serial.println(reset_timer);
+  Serial.println(alredy_played_music);
+  Serial.println(!alredy_played_music);
+  Serial.println((!alredy_played_music && reset_timer == 300000));
+  Serial.println(alredy_played_songs);
+  Serial.println(!alredy_played_songs);
+  Serial.println((!alredy_played_songs && reset_timer != 300000));
+  if (reset_timer != 300000) {
+    Serial.println("BIBOUBI");
+    player.play(1);
+    player.waitAvailable(10000);
+    Serial.println("BIBOUBI");
+  } else if ((dif > reset_timer) || (!alredy_played_music && reset_timer == 300000) || (!alredy_played_songs && reset_timer != 300000)) { // Si aucune musique ne joue, démarre une nouvelle
+      Serial.println("DEBUG 6-c-4");
+      Serial.println(music_number);
+      // if (alredy_played_music && reset_timer == 300000) {
+      //   Serial.println("stop music");  
+      //   player.stop();
+      // }
+      // if (alredy_played_songs && reset_timer != 300000) {
+      //   Serial.println("stop songs");  
+      //   player.stop();
+      // }
+      // Serial.println("DEBUG 6-c-4-a");
+      if (reset_timer == 300000) {
+        alredy_played_music = true;
+      } else {
+        alredy_played_songs = true;
+      }
+      Serial.println("DEBUG 6-c-4-b");
+      Serial.println(player.readState()); //read mp3 state
+      player.play(music_number);
+      Serial.println(now);
+      Serial.println("PLAY");
+      Serial.println("DEBUG 6-c-5");
+      return now;
+  } else {
+    Serial.println("DEBUG 6-c-6");
+    return last_played;
+  }
 }
-
-
+// 14:41:43.415
+// 14:41:53.794
 byte changeState(byte state_to_change, int to_change) {
     if ((state_to_change == 1 && to_change <= 0) || (state_to_change == 0 && to_change >= 0)) {
       state_to_change += to_change;
@@ -267,19 +331,19 @@ void sendToStateMachine()
   Serial.print(" ");
   Serial.println(change_in_delight);
 
-  state_machine_values[0] += (change_in_happy == 1) ? 20 : (change_in_happy == 255) ? -20 : 0;
-  state_machine_values[1] += (change_in_energy == 1) ? 20 : (change_in_energy == 255) ? -20 : 0;
-  state_machine_values[2] += (change_in_friendly == 1) ? 20 : (change_in_friendly == 255) ? -20 : 0;
-  state_machine_values[3] += (change_in_assertive == 1) ? 20 : (change_in_assertive == 255) ? -20 : 0;
-  state_machine_values[4] += (change_in_delight == 1) ? 20 : (change_in_delight == 255) ? -20 : 0;
+  // state_machine_values[0] += (change_in_happy == 1) ? 20 : (change_in_happy == 255) ? -20 : 0;
+  // state_machine_values[1] += (change_in_energy == 1) ? 20 : (change_in_energy == 255) ? -20 : 0;
+  // state_machine_values[2] += (change_in_friendly == 1) ? 20 : (change_in_friendly == 255) ? -20 : 0;
+  // state_machine_values[3] += (change_in_assertive == 1) ? 20 : (change_in_assertive == 255) ? -20 : 0;
+  // state_machine_values[4] += (change_in_delight == 1) ? 20 : (change_in_delight == 255) ? -20 : 0;
 
-  for (int i = 0; i < NUM_VALUES; i++) {
-    if (state_machine_values[i] < 0) {
-      state_machine_values[i] = 0;
-    } else if (state_machine_values[i] > 1000) {
-      state_machine_values[i] = 1000;
-    }
-  }
+  // for (int i = 0; i < NUM_VALUES; i++) {
+  //   if (state_machine_values[i] < 0) {
+  //     state_machine_values[i] = 0;
+  //   } else if (state_machine_values[i] > 1000) {
+  //     state_machine_values[i] = 1000;
+  //   }
+  // }
 }
 
 
