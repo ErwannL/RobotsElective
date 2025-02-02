@@ -18,3 +18,7 @@ You can find in the directory **R2-D2** the sound used in the robot's part.
 ## Laser cutting file
 
 The file **wheel_planks.svg** is the file sent by Thibault to the laser cutting service to get the robot's bases.
+
+## Back to the general readme
+
+The general readme is [here](../Readme.md)

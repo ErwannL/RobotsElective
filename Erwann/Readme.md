@@ -22,3 +22,7 @@ You can find the sounds used explanation in [this readme file](sounds/readme.md)
 ## Code
 
 You can find the code explanation in [this readme file](CodeRobot/readme.md)
+
+## Back to the general readme
+
+The general readme is [here](../Readme.md)
