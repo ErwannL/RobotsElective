@@ -1,7 +1,7 @@
 #include "SoftwareSerial.h"
 #include "DFRobotDFPlayerMini.h"
 
-SoftwareSerial Songs_Serial(12, 11); //tx, rx
+SoftwareSerial Songs_Serial(9, 8); //tx, rx
 
 // Create the Player object
 DFRobotDFPlayerMini Songs_player;

@@ -36,11 +36,9 @@ byte change_in_delight = 0;             //the statemachine value for delight ran
 #define TOUCH_SENSOR_LEFT 5
 #define TOUCH_SENSOR_CENTER 6
 
-SoftwareSerial Songs_Serial(9, 8); //tx, rx
 SoftwareSerial Laugh_Serial(12, 11); //tx, rx
 
 // Create the Player object
-DFRobotDFPlayerMini Songs_player;
 DFRobotDFPlayerMini Laugh_player;
 
 // Threshold and time window for tickling
@@ -97,15 +95,7 @@ void setup()
     Serial.println("Connecting to Laugh DFPlayer Mini failed!");
   }
 
-  Songs_Serial.begin(9600);
-  if (Songs_player.begin(Songs_Serial)) {
-    Serial.println("Songs_player OK");
 
-    // Set volume to maximum (0 to 30).
-    Songs_player.volume(2); //30 is very loud
-  } else {
-    Serial.println("Connecting to Songs DFPlayer Mini failed!");
-  }
   lastTickleTime = millis();
 }
 
@@ -121,7 +111,6 @@ void loop()
 //It sets each of the 5 values for changing the emotions by randomly assigning a 0, 1 or -1 to each
 void doSomething()
 {
-      // Serial.println("DEBUG 1");
 
   // Check each sensor and count activations
   for (int i = 0; i < 5; i++) {
@@ -129,11 +118,9 @@ void doSomething()
       totalTouches++;
     }
   }
-  // Serial.println("DEBUG 2");
 
   // Current time for tracking
   unsigned long currentTime = millis();
-  // Serial.println("DEBUG 3");
 
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= TICKLE_TIME) {
@@ -152,54 +139,21 @@ void doSomething()
       Serial.println(" tickle before detected");
     }
   }
-  // Serial.println("DEBUG 4");
 
   sendToStateMachine();
 
-  // Serial.println("DEBUG 5");
-
   if (state_machine_values[0] < 300) {
-    last_played_music = playSongs(Songs_player, 2, MUSICS, last_played_music);
-    // Songs_player.play(2);
+    last_played_music = playSongs(Laugh_player, 2, MUSICS, last_played_music);
   }
-  // Serial.println("DEBUG 6");
   if (state_machine_values[0] > 700) {
-    // Serial.println("DEBUG 6-a");
-    last_played_music = playSongs(Songs_player, 1, MUSICS, last_played_music);
-    // Songs_player.play(1);
-    // Serial.println("DEBUG 6-b");
-    int randomLaugh = random(1, 6); // Get a random between 1 and 5
-    // Serial.println("DEBUG 6-c");
-    // last_played_song = playSongs(Laugh_player, randomLaugh, SONGS, last_played_song);
-    // Laugh_player.play(randomLaugh);
-    // Serial.println("DEBUG 6-d");
+    last_played_music = playSongs(Laugh_player, 1, MUSICS, last_played_music);
   }
-  // Serial.println("DEBUG 7");
-  if ((state_machine_values[2] < 300) || (state_machine_values[4] < 300)) {
-    // last_played_song = playSongs(Laugh_player, 6, SONGS, last_played_song);
-    // Laugh_player.play(6);
-  }
-  // Serial.println("DEBUG 8");
-
-  if ((state_machine_values[2] < 200) || (state_machine_values[4] < 200)) {
-    // last_played_song = playSongs(Laugh_player, 7, SONGS, last_played_song);
-    // Laugh_player.play(7);
-  }
-  // Serial.println("DEBUG 9");
-
-  if ((state_machine_values[2] < 100) || (state_machine_values[4] < 100)) {
-    // last_played_song = playSongs(Laugh_player, 8, SONGS, last_played_song);
-    // Laugh_player.play(8);
-  }
-  // Serial.println("DEBUG 10");
-
 
   currentTime = millis();
   // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= NO_TICKLE_TIME) {
     change_in_happy = changeState(change_in_happy, -1);
   }
-  // Serial.println("DEBUG 11");
 }
 
 //example how to print the values from the state machine
@@ -255,11 +209,6 @@ unsigned long playSongs(DFRobotDFPlayerMini &player, int music_number, const uns
 
   unsigned long now = millis();
   unsigned long dif = now - last_played;
-  Serial.println(music_number);
-  Serial.println(reset_timer);
-  Serial.println(last_played);
-  Serial.println(now);
-  Serial.println(dif);
   if ((dif > reset_timer) || last_played == 0) { // Si aucune musique ne joue, démarre une nouvelle
       Serial.println(player.readState()); //read mp3 state
       player.play(music_number);
