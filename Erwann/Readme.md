@@ -13,7 +13,9 @@ You can find in the directory **evidences** some pictures of the Erwann's parts 
 
 You can also find the cable's system not builded.
 
-Finally, you can find a picture of the box after the laser cutting and before the assembly.
+And, you can find a picture of the box after the laser cutting and before the assembly.
+
+Finally, there is a picture of the box at the end, with the 2 arduino's.
 
 ## Sounds
 

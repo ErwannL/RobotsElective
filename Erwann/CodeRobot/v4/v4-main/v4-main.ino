@@ -1,137 +1,138 @@
-
 #include <Wire.h>
 #include "SoftwareSerial.h"
 #include "DFRobotDFPlayerMini.h"
 
-//the i2c address of your Arduino
-#define SLAVE_ADDRESS 0x01  // change this to 0x01, 0x02, 0x03, 0x04 or 0x05, depending on the values chosen by your teammates
+// I2C address for Arduino
+#define SLAVE_ADDRESS 0x01  // Adjust this address as needed (e.g., 0x01, 0x02, etc.)
 
-//used for communicating the emotion values
-#define NUM_VALUES 5                    // number of values to send
-int state_machine_values[NUM_VALUES];   // array to store the received emotion values
+#define NUM_VALUES 5                    // Number of emotion values to handle
+int state_machine_values[NUM_VALUES];   // Store received emotion values
 
-//These are the values you can change by giving them te value -1, 1, or 0 (no change)
-byte change_in_happy = 0;               //the statemachine value for happy ranges from 0 (sad) to 1000 (happy) 
-byte change_in_energy = 0;              //the statemachine value for energy ranges from 0 (lethargic) to 1000 (energetic)
-byte change_in_friendly = 0;            //the statemachine value for friendly ranges from 0 (hostile) to 1000 (friendly)
-byte change_in_assertive = 0;           //the statemachine value for assertive ranges from 0 (shy) to 1000 (assertive)
-byte change_in_delight = 0;             //the statemachine value for delight ranges from 0 (disgust) to 1000 (delight)
+byte change_in_happy = 0;               // Emotion value for happiness (range: 0 = sad, 1000 = happy)
+byte change_in_energy = 0;              // Emotion value for energy (range: 0 = lethargic, 1000 = energetic)
+byte change_in_friendly = 0;            // Emotion value for friendliness (range: 0 = hostile, 1000 = friendly)
+byte change_in_assertive = 0;           // Emotion value for assertiveness (range: 0 = shy, 1000 = assertive)
+byte change_in_delight = 0;             // Emotion value for delight (range: 0 = disgust, 1000 = delight)
 
-
-
-
-
-
-
-
-
-
-
-
-
-// Pin definitions
+// Pin definitions for touch sensors
 #define TOUCH_SENSOR_TOP 2
 #define TOUCH_SENSOR_DOWN 3
 #define TOUCH_SENSOR_RIGHT 4
 #define TOUCH_SENSOR_LEFT 5
 #define TOUCH_SENSOR_CENTER 6
 
-SoftwareSerial Laugh_Serial(12, 11); //tx, rx
+SoftwareSerial Laugh_Serial(9, 8); // Define software serial (tx, rx)
 
-// Create the Player object
+// Create the DFPlayer Mini object
 DFRobotDFPlayerMini Laugh_player;
 
-// Threshold and time window for tickling
-const int TICKLE_THRESHOLD = 5; // Minimum combined activations for a "tickle"
-const unsigned long TICKLE_TIME = 500; // Time window in milliseconds
-const unsigned long NO_TICKLE_TIME = 5000; // Time window in milliseconds
-const unsigned long MUSICS = 30000;
+// Constants for tickling detection
+const int TICKLE_THRESHOLD = 5; // Minimum combined activations to detect a "tickle"
+const unsigned long TICKLE_TIME = 500; // Time window for tickling detection in milliseconds
+const unsigned long NO_TICKLE_TIME = 5000; // Time window for no tickle detection
+const unsigned long LAUGH = 15000; // Time window to play laugh
 
-unsigned long last_played_music = 0;
+unsigned long last_played_laugh = 0; // Last time laugh was played
 
-// Variables to track activations and time
-int totalTouches = 0; // Global counter for combined activations
-unsigned long lastTickleTime = 0;
+// Variables for touch sensor tracking
+int totalTouches = 0; // Counter for total touch activations
+unsigned long lastTickleTime = 0; // Last time tickling was detected
 
-// Sensor order: TOP, DOWN, RIGHT, LEFT, CENTER
 int sensorPins[5] = {TOUCH_SENSOR_TOP, TOUCH_SENSOR_DOWN, TOUCH_SENSOR_RIGHT, TOUCH_SENSOR_LEFT, TOUCH_SENSOR_CENTER};
 
-//function setup is always needed and is called once to setup your arduino
-void setup()
-{
+bool player_ready = false;
 
-
+// Setup function to initialize hardware and communication
+void setup() {
+  // Initialize emotion values with a neutral baseline
   state_machine_values[0] = 500;
   state_machine_values[1] = 500;
   state_machine_values[2] = 500;
   state_machine_values[3] = 500;
   state_machine_values[4] = 500;
 
+  // Initialize I2C communication as slave
+  Wire.begin(SLAVE_ADDRESS);
+  Wire.onRequest(requestEvent);  // Register event handler for data request
+  Wire.onReceive(receiveEvent);  // Register event handler for data reception
 
+  // Initialize serial communication for debugging
+  Serial.begin(9600);  
 
-
-
-
-  //needed for i2c communication between state machine and your arduino
-  Wire.begin(SLAVE_ADDRESS);     // join the I2C bus as a slave
-  Wire.onRequest(requestEvent);  // register the request event handler
-  Wire.onReceive(receiveEvent);  // register event to handle incoming data
-
-  //used for showing data in the serial monitor
-  Serial.begin(9600);  // start serial communication
-
-  // Set sensor pins as inputs
+  // Set sensor pins as input
   for (int i = 0; i < 5; i++) {
     pinMode(sensorPins[i], INPUT);
   }
 
-  Laugh_Serial.begin(9600);
-  if (Laugh_player.begin(Laugh_Serial)) {
-    Serial.println("Laugh_player OK");
+  Laugh_Serial.begin(9600);  // Start serial communication with the DFPlayer
 
-    // Set volume to maximum (0 to 30).
-    Laugh_player.volume(2); //30 is very loud
-  } else {
-    Serial.println("Connecting to Laugh DFPlayer Mini failed!");
+  // Attempt to initialize the DFPlayer Mini
+  for (int i = 0; i < 5; i++) {
+    if (Laugh_player.begin(Laugh_Serial)) {
+      Serial.println("Laugh_player OK");
+
+      // Set volume level
+      Laugh_player.volume(2);  // Adjust volume level (0 to 30)
+      player_ready = true;
+      break;
+    } else {
+      Serial.println("Connecting to Laugh DFPlayer Mini failed! Retrying...");
+      delay(500);
+    }
   }
 
+  if (!player_ready) {
+    Serial.println("Laugh_Serial initialization failed after 5 attempts.");
+  }
 
   lastTickleTime = millis();
 }
 
-//function loop is always needed and is called continuously
-void loop()
-{
-  doSomething(); //example function
-  printStateMachineValues(); //show the values that the state machine communicated
-  delay(1000); // an arbitrary delay, can be changed to whatever you need
+// Main loop function
+void loop() {
+  doSomething(); // Detect touches and handle emotions
+  printStateMachineValues(); // Output current emotion values to the serial monitor
+  delay(1000); // Arbitrary delay for the loop (adjust as needed)
 }
 
-//Yes, this is written inefficient, but very easy to understand ;)
-//It sets each of the 5 values for changing the emotions by randomly assigning a 0, 1 or -1 to each
-void doSomething()
-{
-
-  // Check each sensor and count activations
+// Detect touch sensor activations and evaluate emotions
+void doSomething() {
   for (int i = 0; i < 5; i++) {
     if (digitalRead(sensorPins[i]) == HIGH) {
-      totalTouches++;
+      totalTouches++;  // Increment activation count for each touch
     }
   }
 
-  // Current time for tracking
-  unsigned long currentTime = millis();
+  unsigned long currentTime = millis();  // Get current time
 
-  // If time window has passed, evaluate and reset
+  // If the time window has passed, evaluate and reset tickle count
   if (currentTime - lastTickleTime >= TICKLE_TIME) {
     if (totalTouches >= TICKLE_THRESHOLD) {
       lastTickleTime = currentTime;
       totalTouches = 0;
-      if (state_machine_values[4] < 300) {
+
+      if ((state_machine_values[4] < 300) || (state_machine_values[2] < 300)) {
         change_in_friendly = changeState(change_in_friendly, -1);
+        
+        if ((state_machine_values[2] < 300) || (state_machine_values[4] < 300)) {
+          last_played_laugh = playSongs(Laugh_player, 6, LAUGH, last_played_laugh);
+        }
+
+        if ((state_machine_values[2] < 200) || (state_machine_values[4] < 200)) {
+          last_played_laugh = playSongs(Laugh_player, 7, LAUGH, last_played_laugh);
+        }
+
+        if ((state_machine_values[2] < 100) || (state_machine_values[4] < 100)) {
+          last_played_laugh = playSongs(Laugh_player, 8, LAUGH, last_played_laugh);
+        }
       } else {
         change_in_friendly = changeState(change_in_friendly, 1);
         change_in_happy = changeState(change_in_happy, 1);
+
+        if (state_machine_values[0] > 700) {
+          int randomLaugh = random(1, 6);  // Get a random laugh sound to play
+          last_played_laugh = playSongs(Laugh_player, randomLaugh, LAUGH, last_played_laugh);
+        }
       }
     } else {
       Serial.print("still ");
@@ -140,25 +141,15 @@ void doSomething()
     }
   }
 
-  sendToStateMachine();
+  sendToStateMachine(); // Send updated emotion values to state machine
 
-  if (state_machine_values[0] < 300) {
-    last_played_music = playSongs(Laugh_player, 2, MUSICS, last_played_music);
-  }
-  if (state_machine_values[0] > 700) {
-    last_played_music = playSongs(Laugh_player, 1, MUSICS, last_played_music);
-  }
-
-  currentTime = millis();
-  // If time window has passed, evaluate and reset
   if (currentTime - lastTickleTime >= NO_TICKLE_TIME) {
-    change_in_happy = changeState(change_in_happy, -1);
+    change_in_happy = changeState(change_in_happy, -1);  // Gradually decrease happiness over time
   }
 }
 
-//example how to print the values from the state machine
-void printStateMachineValues()
-{
+// Print emotion values to the serial monitor
+void printStateMachineValues() {
   const char* labels[NUM_VALUES] = {
     "Happiness_Sadness",
     "Energetic_Lethargic",
@@ -204,21 +195,24 @@ void printStateMachineValues()
   }
 }
 
-
+// Play the laugh sound based on the player readiness and timing
 unsigned long playSongs(DFRobotDFPlayerMini &player, int music_number, const unsigned long reset_timer, unsigned long last_played) {
+  if (player_ready) {
+    unsigned long now = millis();
+    unsigned long dif = now - last_played;
 
-  unsigned long now = millis();
-  unsigned long dif = now - last_played;
-  if ((dif > reset_timer) || last_played == 0) { // Si aucune musique ne joue, démarre une nouvelle
-      Serial.println(player.readState()); //read mp3 state
-      player.play(music_number);
+    if ((dif > reset_timer) || last_played == 0) {
+      player.play(music_number);  // Play the selected laugh sound
       Serial.println("PLAY");
       return now;
-  } else {
-    return last_played;
+    } else {
+      return last_played;  // Return the last play time if it's too soon
+    }
   }
+  return last_played;  // Return last played time if player isn't ready
 }
 
+// Change the state of an emotion
 byte changeState(byte state_to_change, int to_change) {
     if ((state_to_change == 1 && to_change <= 0) || (state_to_change == 0 && to_change >= 0)) {
       state_to_change += to_change;
@@ -232,12 +226,9 @@ byte changeState(byte state_to_change, int to_change) {
     return state_to_change;
 }
 
-void sendToStateMachine()
-{
-  requestEvent();
-
-
-
+// Send emotion changes to the state machine via I2C
+void sendToStateMachine() {
+  requestEvent();  // Trigger request event to send data
 
   Serial.print(change_in_happy);
   Serial.print(" ");
@@ -248,72 +239,20 @@ void sendToStateMachine()
   Serial.print(change_in_assertive);
   Serial.print(" ");
   Serial.println(change_in_delight);
-
-  state_machine_values[0] += (change_in_happy == 1) ? 50 : (change_in_happy == 255) ? -50 : 0;
-  state_machine_values[1] += (change_in_energy == 1) ? 50 : (change_in_energy == 255) ? -50 : 0;
-  state_machine_values[2] += (change_in_friendly == 1) ? 50 : (change_in_friendly == 255) ? -50 : 0;
-  state_machine_values[3] += (change_in_assertive == 1) ? 50 : (change_in_assertive == 255) ? -50 : 0;
-  state_machine_values[4] += (change_in_delight == 1) ? 50 : (change_in_delight == 255) ? -50 : 0;
-
-  for (int i = 0; i < NUM_VALUES; i++) {
-    if (state_machine_values[i] < 0) {
-      state_machine_values[i] = 0;
-    } else if (state_machine_values[i] > 1000) {
-      state_machine_values[i] = 1000;
-    }
-  }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//###############
-//below functions are for sending and receiving data to the state machine, they should not be changed
-//###############
-
-//The response for the request made by the statemachine to receive change values
-void requestEvent()
-{
-  byte change[NUM_VALUES] = { change_in_happy, change_in_energy, change_in_friendly, change_in_assertive, change_in_delight };                     // array to store the change of each emotion
-  Wire.write(change, NUM_VALUES);  // send the bytes to the master
+// I2C event handlers for receiving and sending data
+void requestEvent() {
+  byte change[NUM_VALUES] = { change_in_happy, change_in_energy, change_in_friendly, change_in_assertive, change_in_delight };
+  Wire.write(change, NUM_VALUES);  // Send emotion changes to master
 }
 
-// function that executes whenever data is received from the state machine
-void receiveEvent(int howMany)
-{
-  // check if the number of bytes received matches the expected number
-  if (howMany == NUM_VALUES * 2)
-  {
-    // read the bytes and store them in the values array
-    for (int i = 0; i < NUM_VALUES; ++i)
-    {
+void receiveEvent(int howMany) {
+  if (howMany == NUM_VALUES * 2) {
+    for (int i = 0; i < NUM_VALUES; ++i) {
       byte x1, x2;
-      x1 = Wire.read();  //x1 holds upper byte of received numPWMChannels
-      x2 = Wire.read();  //x2 holds lower byte of received numPWMChannels
+      x1 = Wire.read();
+      x2 = Wire.read();
       state_machine_values[i] = (int)x1 << 8 | (int)x2;
     }
   }
