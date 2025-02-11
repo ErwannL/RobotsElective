@@ -72,7 +72,7 @@ void setup() {
       Serial.println("Laugh_player OK");
 
       // Set volume level
-      Laugh_player.volume(2);  // Adjust volume level (0 to 30)
+      Laugh_player.volume(2 * 5);  // Adjust volume level (0 to 30)
       player_ready = true;
       break;
     } else {

@@ -47,7 +47,7 @@ void setup()
       Serial.println("Music_player OK");
 
       // Set the music player volume (0-30)
-      Music_player.volume(2); // 30 is very loud, so 2 is a reasonable volume
+      Music_player.volume(2 * 5); // 30 is very loud, so 2 is a reasonable volume
       player_ready = true;
       break;
     } else {
